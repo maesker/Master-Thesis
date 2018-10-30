@@ -1,0 +1,332 @@
+
+#include <string>
+#include <sstream>
+#include <stdio.h>
+#include "gtest/gtest.h"
+#include "coco/loadbalancing/Balancer.h"
+#include "coco/loadbalancing/LoadManager.h"
+#include "coco/loadbalancing/MDistributionManager.h"
+#include "coco/loadbalancing/CommonLBTypes.h"
+#include "coco/loadbalancing/LBCommunicationHandler.h"
+#include "coco/coordination/MltHandler.h"
+#include <string.h>
+#include "coco/loadbalancing/LBConf.h"
+#include "coco/loadbalancing/LBLogger.h"
+#include "coco/loadbalancing/Sensors.h"
+
+#define OBJECT_NAME "LBTest"
+#define CONFIGFILE "../../../conf/loadbalancing.conf"
+
+
+void* start_reccom_server(void* pntr)
+{
+	RecCommunicationServer::get_instance().receive();
+}
+
+
+
+class LBTest : public ::testing::Test
+{
+	protected:
+	    LBTest()
+	    {
+	    }
+
+	    ~LBTest()
+	    {
+	    }
+
+
+	    virtual void SetUp()
+	    {
+
+	    }
+
+	    virtual void TearDown()
+	    {
+	    }
+
+};
+
+
+//copy & paste version of LBCommunicationHandler
+//needed here to specify load values, which are normally retrieved from Sensors (impossible to predict values)
+class TestHandler: public LBCommunicationHandler
+{
+	
+	int counter;
+
+	public: TestHandler()
+	{
+		counter = 0;
+	}
+
+	/*
+	void handle_request(ExtractedMessage& message)
+	{
+		switch(message.sending_module)
+		{
+			//message comes from Loadbalancing module
+		   	case COM_LoadBalancing:
+		    {
+		    	//convert data of incoming message to a LBMessage
+		    	LBMessage *incoming_message;
+		    	//incoming_message = (LBMessage*) malloc(sizeof(LBMessage));
+		    	incoming_message = (LBMessage*) message.data;
+
+		    	if (incoming_message->message_type == LOAD_REQUEST)
+		    	{
+				//needed for creating 3 different values for the 3 servers
+				counter++; 						
+
+		    		ServerLoad *load = new ServerLoad; //doesnt work without 'new'
+		    		
+
+				if (counter == 1)
+				{
+					load->cpu_load = 1;     		          
+		    			load->swaps = 2;			
+		    			load->threads = 3;			
+				}
+
+				if (counter == 2)
+				{
+					load->cpu_load = 3;		
+		    			load->swaps = 2;			
+		    			load->threads = 1;			
+				}
+
+
+				if (counter == 3)
+				{					
+					load->cpu_load = 2;
+		    			load->swaps = 3;
+		    			load->threads = 1;
+					counter = 0;
+				}
+		
+				reply(message.message_id, (void*) load, sizeof(ServerLoad), message.sending_module, message.sending_server);
+
+		    		free(load);
+
+		    		break;
+		    	}
+
+		    }
+
+		 
+
+		    default:
+		    {
+		    	break;
+		    }
+		}//switch
+
+		free(message.data);
+
+	}*/
+
+
+
+};
+
+
+//TestHandler *com_handler;
+LBCommunicationHandler *com_handler;
+LoadManager *loadManager;
+
+TEST (loadbalancing, get_clusterload)
+{
+
+	int succeeded = 1;	
+
+	MltHandler* mlt_handler = &(MltHandler::get_instance());	
+	EXPECT_TRUE(mlt_handler->init_new_mlt("127.0.0.1", 1400, 1, 1) == 0);
+	EXPECT_TRUE(mlt_handler->add_server("127.0.0.1", 1338) == 0);
+	EXPECT_TRUE(mlt_handler->add_server("127.0.0.1", 1339) == 0);
+
+	/*
+	vector<Server> server_list;	
+	mlt_handler->get_server_list(server_list);
+	
+	vector <ServerLoad> cluster_load;
+
+	loadManager->get_cluster_load(server_list, cluster_load);
+
+	*/
+
+	vector <Server> server_list;
+	mlt_handler->get_server_list(server_list);
+	vector <ServerLoad> cluster_load;
+	loadManager->get_cluster_load(server_list, cluster_load);
+
+	//now check whether swaps, threads, cpu_load and server_ip values equal the values sent from handle_request()
+
+	if ( 	(cluster_load[0].swaps != 2) || (cluster_load[1].swaps != 2) || (cluster_load[2].swaps != 3)    )
+		succeeded = 2;
+
+	if (	(cluster_load[0].threads != 3) || (cluster_load[1].threads != 1) || (cluster_load[2].threads != 1)    )
+		succeeded = 3;
+
+	if (	(cluster_load[0].cpu_load != 1) || (cluster_load[1].cpu_load != 3) || (cluster_load[2].cpu_load != 2)    )
+		succeeded = 4;
+	
+	if (	(strcmp (cluster_load[0].server.address.c_str(), "127.0.0.1") != 0) ||  
+		(strcmp (cluster_load[1].server.address.c_str(), "127.0.0.1") != 0) || 
+		(strcmp (cluster_load[2].server.address.c_str(), "127.0.0.1") != 0)    )
+		succeeded = 5;	
+
+	cout << cluster_load[0].server.port << endl;
+	cout << cluster_load[1].server.port << endl;
+	cout << cluster_load[2].server.port << endl;
+
+
+	//delete loadManager;		
+
+	EXPECT_EQ(1, succeeded);
+}
+
+
+//now get server list from LoadManager, which accesses existing MLT
+TEST (loadbalancing, get_server_list)
+{
+	LoadManager *loadManager = LoadManager::get_instance();
+	
+	vector<Server> server_list;	
+	loadManager->get_mlt_handler()->get_server_list(server_list);		
+
+	//enough to compare ports
+	EXPECT_EQ(server_list[0].port, 1337);
+	EXPECT_EQ(server_list[1].port, 1338);	
+	EXPECT_EQ(server_list[2].port, 1339);		
+}
+
+
+
+TEST (loadbalancing, get_target_mds)
+{	
+	//TestHandler com_handler;
+	//com_handler.init(LoadBalancing);
+	//com_handler.start();
+
+	//pthread_t thread1;
+	//pthread_create(&thread1, NULL, start_rec_server, NULL);
+
+	//vector <string> target_servers;
+	//target_servers = loadManager->get_target_mds(server_list, 1, 1, 1); 	
+
+	vector <ServerLoad> cluster_load;
+	vector <Server> server_list;
+
+	//LoadManager *loadManager = LoadManager::get_instance();	
+	loadManager->get_mlt_handler()->get_server_list(server_list);
+	
+	loadManager->get_cluster_load(server_list, cluster_load);
+
+	
+	ServerLoad own_load;	
+	own_load.cpu_load = 1;
+	own_load.swaps = 33;
+	own_load.threads = 22;
+
+
+	float w_cpu, w_threads, w_swaps;
+	w_cpu = 1;
+	w_swaps = 0.5;		
+	w_threads = 0.33;
+	
+	float min_load, serverk_load;
+	int best_target, k;	
+	
+	//test 3 cases with different weighting of load metrics
+	for (int j = 0; j < 3; j++)
+	{
+		//copy'n paste of the code fragment from Balancer::get_target_mds() since impossible to access needed values
+		min_load = own_load.cpu_load * w_cpu + own_load.threads * w_threads + own_load.threads * w_swaps;
+		best_target;
+		for(k = 0; k < cluster_load.size(); k++)
+		{
+			serverk_load = (cluster_load[k].cpu_load * w_cpu + cluster_load[k].threads * w_threads + cluster_load[k].swaps * w_swaps);
+
+			if ( serverk_load < min_load )
+			{
+				min_load = serverk_load;
+				best_target = k;				
+			}
+			
+		}
+
+		if (j == 0) 
+		{
+			EXPECT_EQ(best_target,0);
+			w_cpu = 0.33;
+			w_threads = 1;
+			w_swaps = 0.5;				
+		}				
+		
+		if (j == 1) 
+		{
+			EXPECT_EQ(best_target,1);
+			w_cpu = 0.5;
+			w_threads = 1;
+			w_swaps = 0.33;	
+		}
+		
+		
+		if (j == 2)  EXPECT_EQ(best_target,2);
+		
+	}
+
+	EXPECT_EQ(1,1);
+	
+}
+
+
+
+TEST (loadbalancing, some_op)
+{
+
+	MltHandler* mlt_handler = &(MltHandler::get_instance());
+
+	EXPECT_EQ(46, 46);
+
+}
+
+
+
+
+int main(int argc, char **argv)
+{
+	cout << "config file init" << endl;
+	
+	LBConf::init(CONFIGFILE);	
+
+	cout << "config file done" << endl;
+	
+	LBLogger::create_instance();
+	LBLogger::get_instance()->init();
+	
+	LBCommunicationHandler::create_instance();
+	com_handler = LBCommunicationHandler::get_instance();
+	com_handler->init(COM_LoadBalancing);
+	com_handler->start();
+
+	pthread_t thread1;
+	pthread_create(&thread1, NULL, start_reccom_server, NULL);
+
+	
+	//com_handler.init(COM_LoadBalancing);
+	//com_handler.start();
+
+	LoadManager::create_instance();
+	loadManager = LoadManager::get_instance();
+
+	//if()
+
+	
+
+    	::testing::InitGoogleTest(&argc, argv);
+    	return RUN_ALL_TESTS();
+}
+
+

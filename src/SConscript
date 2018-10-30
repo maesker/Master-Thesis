@@ -1,0 +1,155 @@
+#!/usr/bin/python
+Import('buildHelper')
+Import('config')
+
+
+
+lib_target  = "Logger"
+lib_sources = ["logging/Logger.cpp"]
+env = Environment()
+env.Append( CPPFLAGS = [ config.get_cflags() ] )
+env.Append( CPPFLAGS = [ "-std=c++0x" ] )
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc'] )
+if config.get_logging():
+	env.Append( CPPDEFINES=['LOGGER_ENABLED'] )
+
+env.Append( CPPPATH = [ "include", "logging" ] )
+x = env.StaticLibrary(target = lib_target, source = lib_sources)
+env.Install("lib",x)
+
+
+#Build a shared library of the exceptions
+prof_src = buildHelper.scanFiles("pc2fsprofiler") 
+lib_target = "Pc2fsProfiler"
+env = Environment(CPPPATH = ["include"]);
+
+if config.get_profiling():
+	env.Append( CPPDEFINES=['PROFILER_ENABLED'] )
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc'] )
+env.Append( CCFLAGS = config.cflags )
+env.Append( CCFLAGS = '-std=gnu++0x' )
+
+prof = env.StaticLibrary(target = lib_target, source = prof_src)
+env.Install("lib",prof)
+
+#
+# Compiling the shared fsal zmq methods as a static library
+#
+
+lib_target  = "fsal_shared"
+lib_sources = buildHelper.scanFiles("fsal_shared")
+
+env = Environment(CCFLAGS = [ config.get_cflags() ])
+
+if config.get_profiling():
+	env.Append( CPPDEFINES=['PROFILER_ENABLED'] )
+
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc'] )
+env.Append( CPPPATH = ["include"] )
+shared_fsal = env.StaticLibrary(target = lib_target, source = lib_sources)
+env.Install("lib", shared_fsal)
+
+lib_target  = "ebwriter"
+lib_sources = ["ebwriter/ebwriter.c"]
+env = Environment(CCFLAGS = [ config.get_cflags() ])
+env.Append( CPPPATH = ["include"] )
+eb = env.StaticLibrary(target = lib_target, source = lib_sources)
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc'] )
+env.Install("lib", eb)
+
+
+#
+# Build the mds
+#
+
+
+
+#Build a shared library of the metadata modules
+mm_src =       buildHelper.scanFiles("mm/storage")
+mm_src.append( buildHelper.scanFiles("mm/einodeio") )
+mm_src.append( buildHelper.scanFiles("mm/journal") )
+mm_src.append( buildHelper.scanFiles("mm/mds") )
+mm_src.append( buildHelper.scanFiles("custom_protocols") )
+mm_src.append("netraid/components/network/sshwrapper.cpp" )
+mm_src.append( buildHelper.scanFiles("netraid/server/DataServer") )
+mm_src.append( buildHelper.scanFiles("netraid/components/raidlibs") )
+
+lib_target = "mm"
+env = Environment(CPPPATH = ["include", "netraid/include"])
+
+if config.get_tracing():
+	env.Append( CPPDEFINES=['TRACE_ZMQ_MESSAGES'] )
+
+if config.get_io_profiling():
+	env.Append( CPPDEFINES=['IO_PROFILING'] )
+
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc','libssh2'] )
+
+env.Append( CCFLAGS = config.cflags )
+env.Append( CCFLAGS = '-std=gnu++0x' )
+
+mm = env.StaticLibrary(target = lib_target, source = mm_src)
+env.Install("lib", mm)
+
+
+
+#Build a shared library of the coordination 
+coco_src = 	    buildHelper.scanFiles("coco/coordination") 
+coco_src.append( buildHelper.scanFiles("coco/communication") )
+coco_src.append( buildHelper.scanFiles("coco/dao") )
+coco_src.append( buildHelper.scanFiles("coco/loadbalancing") )
+coco_src.append( buildHelper.scanFiles("coco/administration") )
+coco_src.append( buildHelper.scanFiles("coco/prefix_perm") )
+
+lib_target = "coco"
+env = Environment(CPPPATH = ["include", "netraid/include"]);
+env.Append( CCFLAGS = config.cflags )
+env.Append( CCFLAGS = '-std=gnu++0x' )
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc', 'libssh2'] )
+coco = env.StaticLibrary(target = lib_target, source = coco_src)
+env.Install("lib", coco)
+
+
+#Build a shared library of the exceptions
+except_src = buildHelper.scanFiles("exceptions") 
+lib_target = "exceptions"
+env = Environment(CPPPATH = ["include", "netraid/include"]);
+env.Append( CCFLAGS = config.cflags )
+env.Append( CCFLAGS = '-std=gnu++0x' )
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc','libssh2'] )
+
+env.Append( LIBS = ['Logger'] )
+excepts = env.StaticLibrary(target = lib_target, source = except_src)
+env.Install("lib", excepts)
+
+
+mds = []
+mds.append("main.cpp")
+mds.append("netraid/components/network/ServerManager.cpp")
+
+env = Environment()
+env.Append( CCFLAGS = config.cflags )
+env.Append( CCFLAGS = '-std=gnu++0x' )
+
+env.Append( LIBS = ["pthread","fsal_shared" ,\
+    'Logger','ConfigManager', 'boost_system','boost_program_options',\
+    'boost_regex',"boost_filesystem", "coco", "mm", "ebwriter", "mlt","exceptions", "Pc2fsProfiler","zmq"] )
+
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc'] )
+
+env.Append( LIBPATH= [ "lib", 'Logger','libssh2', "pc2fsProfiler" ,'configuration',"exceptions", "netraid/lib"] )
+env.Append( LIBS = ['Logger','libssh2'] )
+#env.Append( CPPDEFINES={'EINODE_TEST' : '1'})
+env.Append( CPPPATH=["netraid/include",'include', 'coco/coordination', 'mm/einodeio', 'mm/journal', \
+    'mm/mds', 'mm/storage','mm/fsal_shared', 'pc2fsProfiler','logging',"configuration",\
+    "Pc2fsProfiler","exceptions"])
+env.Program( target = 'metadataServer',  source = mds)
+

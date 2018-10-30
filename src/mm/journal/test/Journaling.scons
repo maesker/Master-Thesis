@@ -1,0 +1,45 @@
+#!/usr/bin/python
+Import('testRunner')
+
+import os
+import glob
+import sys
+
+def unique( list ) :
+         return dict.fromkeys( list ).keys()
+
+
+def recursiveDirs(root) :
+         return filter( ( lambda a : a.rfind( ".git") == -1 ), [ a[0] for a in os.walk( root ) ] )
+
+
+def scanFiles(dir, accept=[ "*.cpp", "*.c" ], reject=["test"] ) :
+         sources = []
+         paths = recursiveDirs( dir )
+         for path in paths:
+                 for pattern in accept:
+                         sources += glob.glob( path + "/" + pattern )
+         for pattern in reject:
+                 sources = filter( ( lambda a : a.rfind( pattern ) == -1 ), sources )
+         return unique( sources )
+
+testSrc = scanFiles("../")
+testSrc.append( scanFiles("../../storage"))
+testSrc.append( scanFiles("../../einodeio"))
+#testSrc.append( ("./OperationTest.cpp") )
+#testSrc.append( ("./JournalChunkTest.cpp") )
+#testSrc.append( ("./JournalTest.cpp") )
+testSrc.append( ("./JournalMultiThreadingTest.cpp") )
+
+testEnv = Environment( )
+testEnv.Append( LIBS = [ "gtest", "gtest_main", "boost_thread", "Logger", "Pc2fsProfiler" ] )
+testEnv.Append( LIBPATH = [ "../../../logging", "../../../lib" ] ) 
+testEnv.Append( CCFLAGS =  ['-std=gnu++0x', '-g'] )
+testEnv.Append( CPPPATH=['../../../include', '../../storage', '../../einodeio'] )
+testEnv.Program( target = 'journalingTest', source = testSrc)
+#/home/viktor/PG/src/include
+
+
+
+Command("journalingTest.passed",'journalingTest', testRunner.runUnitTest)
+

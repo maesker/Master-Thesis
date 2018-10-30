@@ -1,0 +1,64 @@
+#!/usr/bin/python
+Import('testRunner')
+
+import os
+import glob
+import sys
+
+def unique( list ) :
+         return dict.fromkeys( list ).keys()
+
+
+def recursiveDirs(root) :
+         return filter( ( lambda a : a.rfind( ".git") == -1 ), [ a[0] for a in os.walk( root ) ] )
+
+
+def scanFiles(dir, accept=[ "*.cpp", "*.c" ], reject=["test"] ) :
+         sources = []
+         paths = recursiveDirs( dir )
+         for path in paths:
+                 for pattern in accept:
+                         sources += glob.glob( path + "/" + pattern )
+         for pattern in reject:
+                 sources = filter( ( lambda a : a.rfind( pattern ) == -1 ), sources )
+         return unique( sources )
+
+testSrc = scanFiles("../")
+testSrc.append( ("./LBTest.cpp") )
+testSrc.append( scanFiles("../../communication") )
+testSrc.append( scanFiles("../../dao") )
+testSrc.append( scanFiles("../../coordination") )
+testSrc.append( scanFiles("../../../logging") )
+testSrc.append( scanFiles("../../../mm/journal") )
+testSrc.append( scanFiles("../../../mm/journal") )
+testSrc.append( scanFiles("../../../mm/mds") )
+testSrc.append( scanFiles("../../../mm/storage") )
+testSrc.append( scanFiles("../../../mm/einodeio") )
+testSrc.append( scanFiles("../../../fsal_shared") )
+testSrc.append( scanFiles("../../../exceptions") )
+
+
+testEnv = Environment( )
+#testEnv.Append( LIBS = [ "gtest", "gtest_main", "mlt", "pthread", "zmq", "Logger", "coco"] )
+#testEnv.Append( CPPPATH = "../../../include" )
+#testEnv.Append( LIBPATH =  ['../../../lib', '../../../logging'] )
+#testEnv.Append( CCFLAGS =  ['-std=gnu++0x', '-g'] )
+#testEnv.Program( target = 'LBTest', source = testSrc)
+
+#each time something is missing.... hence just append all of them
+testEnv.Append( LIBS = [ "zmq","pthread","fsal_shared" ,\
+    'Logger','ConfigManager', 'boost_system','boost_program_options',\
+    'boost_regex',"boost_filesystem", "mm","coco", "ebwriter", "mlt","exceptions"] )
+testEnv.Append( LIBPATH= [ "../../../lib", '../../../logging'] )
+
+env.Append( CPPPATH=['../../../include', '../../..coco/coordination', '../../..mm/einodeio', '../../..mm/journal', \
+    '../../..mm/mds', '../../..mm/storage','../../..mm/fsal_shared', '../../..logging',"../../..configuration","../../..exceptions"])
+
+testEnv.Append( CCFLAGS =  ['-std=gnu++0x', '-g'] )
+testEnv.Program( target = 'LBTest', source = testSrc)
+
+
+
+
+Command("LBTest.passed",'LBTest', testRunner.runUnitTest)
+

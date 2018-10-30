@@ -1,0 +1,11 @@
+#!/usr/bin/python
+Import('config')
+
+env = Environment()
+env.Append( LIBPATH = ["../lib" ] )
+env.Append( LIBS = ["mlt", "coco", "pthread", "zmq" ] )
+env.Append( CCFLAGS =  config.get_cflags() )
+env.Append( CCFLAGS =  ['-std=gnu++0x'] )
+env.Append( CPPPATH=['../include'] )
+
+env.Program('adminTool', ['AdminTool.cpp','AdminOperations.cpp'])

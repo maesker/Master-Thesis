@@ -1,0 +1,28 @@
+#!/usr/bin/python
+Import('config')
+
+lib_target  = "Pc2fsProfiler"
+lib_sources = ["Pc2fsProfiler.cpp"]
+
+env = Environment()
+env.Append( CPPFLAGS = [ config.get_cflags() ] )
+env.Append( CPPFLAGS = [ "-std=c++0x" ] )
+env.Append( CPPPATH = [ "../include" ] )
+
+
+#if config.get_profiling():
+#env.Append( CPPDEFINES=['pc2fsPROFILER_ENABLED'] )
+
+env.StaticLibrary(target = lib_target, source = lib_sources)
+
+#env = Environment()
+#lib_target  = "testLogger"
+#lib_sources = ["test_Logger.cpp"]
+#env.Append( CPPDEFINES=['LOGGER_ENABLED'] )
+#env.Append( CPPFLAGS = [ config.get_cflags() ] )
+#env.Append( CPPFLAGS = [ "-std=c++0x" ] )
+#env.Append( CPPPATH = [ "../include" ] )
+#env.Append( LDFLAGS = [ "Logger" ] )
+#env.Append( LIBPATH = [ "." ] )
+#!/usr/bin/python
+

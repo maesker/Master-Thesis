@@ -1,0 +1,13 @@
+#!/usr/bin/python
+Import('config')
+
+lib_target  = "ConfigManager"
+lib_sources = ["ConfigurationManager.cpp"]
+
+env = Environment()
+env.Append( CPPFLAGS =  config.get_cflags()  )
+env.Append( CPPFLAGS = [ "-std=c++0x" ] )
+env.Append( CPPPATH = [ "../include" ] )
+env.Append( LIBS = [ 'boost_system','boost_program_options','boost_regex',"boost_filesystem-mt","pthread"] )
+
+env.StaticLibrary(target = lib_target, source = lib_sources)

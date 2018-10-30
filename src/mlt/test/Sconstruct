@@ -1,0 +1,101 @@
+#!/usr/bin/python
+#vim: set filetype=python
+
+# More examples can be found here:
+# http://trac.assembla.com/hydrogen/browser/branches/0.9.5/Sconstruct
+
+import os
+import glob
+import sys
+
+
+#
+# Colorize the scons output
+# http://www.scons.org/wiki/ColorBuildMessages
+#
+
+colors = {}
+colors['cyan'] = '\033[96m'
+colors['purple'] = '\033[95m'
+colors['blue'] = '\033[94m'
+colors['green'] = '\033[92m'
+colors['yellow'] = '\033[93m'
+colors['red'] = '\033[91m'
+colors['end'] = '\033[0m'
+
+#If the output is not a terminal, remove the colors
+if not sys.stdout.isatty():
+   for key, value in colors.iteritems():
+      colors[key] = ''
+
+compile_source_message = '%sCompiling %s==> %s$SOURCE%s' % \
+   (colors['blue'], colors['purple'], colors['yellow'], colors['end'])
+
+compile_shared_source_message = '%sCompiling shared %s==> %s$SOURCE%s' % \
+   (colors['blue'], colors['purple'], colors['yellow'], colors['end'])
+
+link_program_message = '%sLinking Program %s==> %s$TARGET%s' % \
+   (colors['red'], colors['purple'], colors['yellow'], colors['end'])
+
+link_library_message = '%sLinking Static Library %s==> %s$TARGET%s' % \
+   (colors['red'], colors['purple'], colors['yellow'], colors['end'])
+
+ranlib_library_message = '%sRanlib Library %s==> %s$TARGET%s' % \
+   (colors['red'], colors['purple'], colors['yellow'], colors['end'])
+
+link_shared_library_message = '%sLinking Shared Library %s==> %s$TARGET%s' % \
+   (colors['red'], colors['purple'], colors['yellow'], colors['end'])
+
+
+env = Environment(
+  CXXCOMSTR = compile_source_message,
+  CCCOMSTR = compile_source_message,
+  SHCCCOMSTR = compile_shared_source_message,
+  SHCXXCOMSTR = compile_shared_source_message,
+  ARCOMSTR = link_library_message,
+  RANLIBCOMSTR = ranlib_library_message,
+  SHLINKCOMSTR = link_shared_library_message,
+  LINKCOMSTR = link_program_message,
+  JAVACCOMSTR = compile_source_message
+)
+
+Export('env')
+
+
+
+#
+# Helper function
+#
+
+def unique( list ) :
+         return dict.fromkeys( list ).keys()
+
+
+def recursiveDirs(root) :
+         return filter( ( lambda a : a.rfind( ".git") == -1 ), [ a[0] for a in os.walk( root ) ] )
+
+
+def scanFiles(dir, accept=[ "*.cpp", "*.c" ], reject=["test"] ) :
+         sources = []
+         paths = recursiveDirs( dir )
+         for path in paths:
+                 for pattern in accept:
+                         sources += glob.glob( path + "/" + pattern )
+         for pattern in reject:
+                 sources = filter( ( lambda a : a.rfind( pattern ) == -1 ), sources )
+         return unique( sources )
+
+class TestRunner:         
+	def runUnitTest(self,env,target,source):
+		import subprocess
+   		app = str(source[0].abspath)
+   		if not subprocess.call(app):
+   			open(str(target[0]),'w').write("PASSED\n")
+   	
+
+testRunner = TestRunner()
+
+Export('testRunner')
+
+SConscript(['MltTest.scons'])
+

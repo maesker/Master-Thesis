@@ -1,0 +1,15 @@
+#!/usr/bin/python
+Import('testRunner')
+
+testEnv = Environment( )
+
+testEnv.Append( LIBS = [ "gtest",  "pthread", "gtest_main", "Logger", "Pc2fsProfiler" ] )
+testEnv.Append( LIBPATH =  ['../../../lib' ,'../../../logging','../../../pc2fsprofiler'] )
+
+testEnv.Append( CPPPATH = ["../../../include"] )
+testEnv.Append( CCFLAGS =  ['-std=gnu++0x', '-g', '-DDAO_TESTING'] )
+testEnv.Program( target = 'DistributedAtomicOperationsTest', source = ["../DistributedAtomicOperations.cpp", 
+"DistributedAtomicOperationsTest.cpp", "DAOTestEmulatorStaticVariableInitialization.cpp", "MltHandler.cpp", "SendCommunicationServer.cpp",
+"../../../mm/journal/JournalException.cpp"])
+
+Command("DistributedAtomicOperationsTest.passed",'DistributedAtomicOperationsTest', testRunner.runUnitTest)

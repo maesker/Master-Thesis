@@ -1,0 +1,10 @@
+#!/usr/bin/python
+Import('config')
+
+lib_target  = "mlt"
+lib_sources = ["mlt.c", "mlt_file_provider.c"]
+
+env = Environment(CCFLAGS = [ config.get_cflags() ])
+env.Append(CPPPATH = ["../include"])
+mlt = env.StaticLibrary(target = lib_target, source = lib_sources)
+env.Install("../lib", mlt)

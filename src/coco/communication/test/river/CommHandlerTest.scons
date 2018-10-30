@@ -1,0 +1,42 @@
+#!/usr/bin/python
+Import('testRunner')
+
+import os
+import glob
+import sys
+
+def unique( list ) :
+         return dict.fromkeys( list ).keys()
+
+
+def recursiveDirs(root) :
+         return filter( ( lambda a : a.rfind( ".git") == -1 ), [ a[0] for a in os.walk( root ) ] )
+
+
+def scanFiles(dir, accept=[ "*.cpp", "*.c" ], reject=["test"] ) :
+         sources = []
+         paths = recursiveDirs( dir )
+         for path in paths:
+                 for pattern in accept:
+                         sources += glob.glob( path + "/" + pattern )
+         for pattern in reject:
+                 sources = filter( ( lambda a : a.rfind( pattern ) == -1 ), sources )
+         return unique( sources )
+
+testSrc = scanFiles("../../")
+testSrc.append( ("./CommHandlerTest.cpp") )
+testSrc.append( ("../../../coordination/MltHandler.cpp") )
+
+testEnv = Environment( )
+testEnv.Append( LIBS = [ "zmq", "gtest", "gtest_main", "Logger", "mlt" ] )
+testEnv.Append( LIBPATH =  ['../../../../mlt'] )
+testEnv.Append( LIBPATH =  ['../../../../logging'] )
+testEnv.Append( CPPPATH = [ '../../../../include'] )
+testEnv.Append( CCFLAGS =  ['-std=gnu++0x', '-g'] )
+testEnv.Program( target = 'commHandlerTest', source = testSrc)
+
+
+
+
+Command("commHandlerTest.passed",'commHandlerTest', testRunner.runUnitTest)
+

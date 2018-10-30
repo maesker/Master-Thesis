@@ -1,0 +1,14 @@
+#!/usr/bin/python
+Import('testRunner')
+
+testEnv = Environment( )
+
+testEnv.Append( LIBS = [ "zmq", "gtest", "gtest_main", "Logger", "pthread", "Pc2fsProfiler" ] )
+testEnv.Append( LIBPATH =  ['../../../logging'] )
+testEnv.Append( LIBPATH = ['../../../pc2fsprofiler'])
+testEnv.Append( CPPPATH = [ "../../../include"] )
+testEnv.Append( CCFLAGS =  ['-std=gnu++0x', '-g'] )
+#testEnv.Program( target = 'sendServerTest', source = ["../SendCommunicationServer.cpp", "SendServerTest.cpp", "../CommunicationLogger.cpp", "MltHandler.cpp"])
+
+#Command("sendServerTest.passed",'sendServerTest', testRunner.runUnitTest)
+

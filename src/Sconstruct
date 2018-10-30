@@ -1,0 +1,201 @@
+#!/usr/bin/python
+#vim: set filetype=python
+
+# More examples can be found here:
+# http://trac.assembla.com/hydrogen/browser/branches/0.9.5/Sconstruct
+
+import os
+import glob
+import sys
+from time import sleep
+
+#This argument defines if tests should be run
+test = ARGUMENTS.get('test', 0)
+
+#This argument defines if the logging should be enabled
+logging = ARGUMENTS.get('logging', 1)
+
+#This argument defines if the tracing of zmq messages should be enabled
+#Traced messages go to /tmp/mds_tracefile.log
+tracing = ARGUMENTS.get('tracing', 0)
+
+#This argument defines if the tracing of zmq messages should be enabled
+#Traced messages go to /tmp/mds_tracefile.log
+profiling = ARGUMENTS.get('profiling', 0)
+
+#This argument defines if the profiling of io operations should be enabled
+io_profiling = ARGUMENTS.get('io_profiling', 0)
+
+#This argument defines if the we want to link against tcmalloc
+tcmalloc = ARGUMENTS.get('tcmalloc', 0)
+
+
+
+
+class BuildHelper:
+	def unique(self,   list ) :
+		 return dict.fromkeys( list ).keys()
+
+
+	def recursiveDirs(self, root) :
+		 return filter( ( lambda a : a.rfind( ".git") == -1 ),  [ a[0] for a in os.walk( root ) ] )
+
+
+	def scanFiles(self, dir, accept=[ "*.cpp" , "*.c" ], reject=["test"] ) :
+		 sources = []
+		 paths = self.recursiveDirs( dir )
+		 for path in paths:
+			 for pattern in accept:
+				 sources += glob.glob( path + "/" + pattern )
+		 for pattern in reject:
+			 sources = filter( ( lambda a : a.rfind( pattern ) == -1 ),  sources )
+		 return self.unique( sources )
+
+class TestBuildHelper:
+	def unique(self,   list ) :
+		 return dict.fromkeys( list ).keys()
+
+
+	def recursiveDirs(self, root) :
+		 return filter( ( lambda a : a.rfind( ".git") == -1 ),  [ a[0] for a in os.walk( root ) ] )
+
+
+	def scanFiles(self, dir, accept=[ "*.cpp" ], reject=["main.cpp"] ) :
+		 sources = []
+		 paths = self.recursiveDirs( dir )
+		 for path in paths:
+			 for pattern in accept:
+				 sources += glob.glob( path + "/" + pattern )
+		 for pattern in reject:
+			 sources = filter( ( lambda a : a.rfind( pattern ) == -1 ),  sources )
+		 return self.unique( sources )
+class TestRunner:         
+	def runUnitTest(self,env,target,source):
+		import subprocess
+   		app = str(source[0].abspath)
+   		if not subprocess.call(app):
+   			open(str(target[0]),'w').write("PASSED\n")
+
+class GlobalConfig:
+
+	cflags = "-g"
+	tracing_enabled = False
+	logging_enabled = True
+	profiling_enabled = False
+	io_profiling_enabled = False
+	tcmalloc_enabled = True
+
+	def get_cflags( self ):
+		return self.cflags
+
+	def set_cflags( self, cflags ):
+		self.cflags = cflags
+
+
+
+	def get_tracing( self ):
+		return self.tracing_enabled
+
+	def set_tracing( self, tracing ):
+		self.tracing_enabled = tracing
+
+	def get_logging( self ):
+		return self.logging_enabled
+
+	def set_logging( self, logging ):
+		self.logging_enabled = logging
+
+	def get_profiling( self ):
+		return self.profiling_enabled
+
+	def set_profiling( self, logging ):
+		self.profiling_enabled = logging
+
+	def get_io_profiling( self ):
+		return self.io_profiling_enabled
+
+	def set_io_profiling( self, val ):
+		self.io_profiling_enabled = val
+
+	def get_tcmalloc( self ):
+		return self.tcmalloc_enabled
+
+	def set_tcmalloc( self, val ):
+		self.tcmalloc_enabled = val
+
+
+
+config = GlobalConfig()
+config.set_cflags("")
+
+print "\n Config options: "
+
+if int(logging):
+	print "\t Logging enabled"
+	config.set_logging(True)
+else:
+	print "\t Logging disabled"
+	config.set_logging(False)
+
+
+if int(tracing):
+	print "\t Tracing enabled"
+	config.set_tracing(True)
+else:
+	print "\t Tracing disabled"
+	config.set_tracing(False)
+
+
+if int(profiling):
+	print "\t Profiling enabled"
+	config.set_profiling(True)
+else:
+	print "\t Profiling disabled"
+	config.set_profiling(False)
+
+if int(io_profiling):
+	print "\t IO_Profiling enabled"
+	config.set_io_profiling(True)
+else:
+	print "\t IO_Profiling disabled"
+	config.set_io_profiling(False)
+
+if int(tcmalloc):
+	print "\t Linking with tcmalloc enabled"
+	config.set_tcmalloc(True)
+else:
+	print "\t Linking with tcmalloc disabled"
+	config.set_tcmalloc(False)
+
+
+print "\t Common CCFLAGS: " + config.get_cflags() + "\n\n"
+
+sleep(1)
+
+	
+if int(test):
+	testRunner = TestRunner();
+	buildHelper = TestBuildHelper()	
+	Export('buildHelper')	
+	Export('testRunner')
+	Export('config')
+	SConscript(['logging/SConscript'])
+
+	for dir in ["coco/coordination/test/", "coco/communication/test/", "coco/dao/test/", "logging/test/", "mm/storage/test/", "mm/mds/test/", "mm/einodeio/test/", "ebwriter/test/", "mm/journal/test" ]:
+        #for dir in ["coco/coordination/test/", "coco/communication/test/", "logging/test/", "mm/mds/test/",  "ebwriter/test/", "mm/storage/test/", "mm/einodeio/test/" ]:
+		for file in os.listdir(dir):
+			if file[-5:] == "scons":
+				SConscript([ dir + file])
+	
+else:
+	buildHelper = BuildHelper()
+	Export('buildHelper')	
+	Export('config')	
+	SConscript(['configuration/SConscript'])
+	SConscript(['logging/SConscript'])
+	SConscript(['mlt/SConscript'])
+	SConscript(['SConscript'])
+	SConscript(['adminTool/SConscript'])
+	SConscript(['fakeClient/SConscript'])
+
+

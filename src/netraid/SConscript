@@ -1,0 +1,206 @@
+#!/usr/bin/python
+Import('buildHelper')
+Import('config')
+
+
+##Build a shared library of the exceptions
+except_src = buildHelper.scanFiles("customExceptions") 
+lib_target = "customExceptions"
+env = Environment(CPPPATH = ["include"]);
+env.Append( CCFLAGS = config.cflags )
+env.Append( CCFLAGS = '-std=gnu++0x' )
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc'] )
+excepts = env.StaticLibrary(target = lib_target, source = except_src)
+env.Install("lib", excepts)
+
+
+###Build a shared library of the exceptions
+src = buildHelper.scanFiles("tools") 
+lib_target = "Toolscollection"
+env = Environment(CPPPATH = ["include"]);
+env.Append( CCFLAGS = config.cflags )
+env.Append( CCFLAGS = '-std=gnu++0x' )
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc'] )
+log = env.StaticLibrary(target = lib_target, source = src)
+env.Install("lib", log)
+
+
+
+
+conf_src = buildHelper.scanFiles("components/configmanager") 
+lib_target = "ConfigurationManager"
+env = Environment(CPPPATH = ["include","../include"]);
+
+if config.get_profiling():
+	env.Append( CPPDEFINES=['PROFILER_ENABLED'] )
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc'] )
+
+env.Append( CCFLAGS = config.cflags )
+env.Append( CCFLAGS = '-std=gnu++0x' )
+conf = env.StaticLibrary(target = lib_target, source = conf_src)
+env.Install("lib",conf)
+
+
+
+src = buildHelper.scanFiles("components/network") 
+src.append( buildHelper.scanFiles("abstracts") )
+src.append( buildHelper.scanFiles("customExceptions") )
+
+lib_target = "network_libs"
+env = Environment(CPPPATH = ["include","../include"]);
+
+if config.get_profiling():
+	env.Append( CPPDEFINES=['PROFILER_ENABLED'] )
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc'] )
+
+env.Append( LIBS = ["lib","customExceptions", "../lib", "mm"] )
+env.Append( CCFLAGS = config.cflags )
+env.Append( CCFLAGS = '-std=gnu++0x' )
+conf = env.StaticLibrary(target = lib_target, source = src)
+env.Install("lib",conf)
+
+
+
+src = buildHelper.scanFiles("server") 
+src.append( buildHelper.scanFiles("abstracts") )
+src.append( buildHelper.scanFiles("components/diskio") )
+src.append( buildHelper.scanFiles("components/doCache") )
+
+src.append( buildHelper.scanFiles("components/OperationManager") )
+src.append( buildHelper.scanFiles("components/raidlibs") )
+src.append( buildHelper.scanFiles("tools") )
+src.append( buildHelper.scanFiles("customExceptions") )
+src.append( buildHelper.scanFiles("../pc2fsprofiler") )
+
+#src.append( "../custom_protocols/pnfs/PnfsProtocol.cpp" )
+#src.append( buildHelper.scanFiles("../custom_protocols/storage") )
+#src.append( buildHelper.scanFiles("../custom_protocols/cluster") )
+src.append( buildHelper.scanFiles("../custom_protocols") )
+src.append( buildHelper.scanFiles("../fsal_shared") )
+
+src.append( buildHelper.scanFiles("../mm/mds") )
+#//src.append( buildHelper.scanFiles("../mlt") )
+#//src.append( buildHelper.scanFiles("../logging") )
+#//src.append( buildHelper.scanFiles("../configuration") )
+#//src.append( buildHelper.scanFiles("../ebwriter") )
+
+lib_target = "server"
+env = Environment(CPPPATH = ["include","../include"]);
+
+if config.get_profiling():
+	env.Append( CPPDEFINES=['PROFILER_ENABLED'] )
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc'] )
+
+env.Append( LIBS = ["lib","mm","../lib", "Logger"] )
+env.Append( CCFLAGS = config.cflags )
+env.Append( CCFLAGS = '-std=gnu++0x' )
+conf = env.StaticLibrary(target = lib_target, source = src)
+env.Install("lib",conf)
+
+
+src = ["client/Client.cpp"] 
+src.append( buildHelper.scanFiles("tools") )
+src.append( buildHelper.scanFiles("../mm") )
+src.append( buildHelper.scanFiles("../custom_protocols") )
+#src.append("../mm/mds/ByterangeLockManager.cpp" )
+src.append( buildHelper.scanFiles("../coco") )
+src.append( buildHelper.scanFiles("../mlt") )
+src.append( buildHelper.scanFiles("../logging") )
+src.append( buildHelper.scanFiles("../configuration") )
+src.append( buildHelper.scanFiles("../ebwriter") )
+src.append( buildHelper.scanFiles("../pc2fsprofiler") )
+src.append( buildHelper.scanFiles("server") )
+src.append( buildHelper.scanFiles("components/diskio") )
+src.append( buildHelper.scanFiles("components/DataObjectCache") )
+src.append( buildHelper.scanFiles("components/OperationManager") )
+src.append( buildHelper.scanFiles("components/raidlibs") )
+src.append( buildHelper.scanFiles("../fsal_shared") )
+
+env = Environment()
+env.Append( CCFLAGS = config.cflags )
+env.Append( CCFLAGS = '-std=gnu++0x' )
+env.Append( LIBS = ["network_libs","pthread","Toolscollection", 'boost_system',
+    'boost_program_options','boost_regex',"boost_filesystem",
+    "ConfigurationManager", "Pc2fsProfiler","zmq","customExceptions", "mpi"] )
+
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc'] )
+if config.get_profiling():
+	env.Append( CPPDEFINES=['PROFILER_ENABLED'] )
+
+env.Append( LIBPATH= [ "lib","../lib", ".." ] )
+env.Append( CPPPATH=["network_libs","include", "mm","../include", "customExceptions","Toolscollection","ConfigurationManager","Pc2fsProfiler"])
+#env.Program( target = 'Client',  source =src)
+client = env.StaticLibrary(target = "client_lib", source = src)
+env.Install("lib", client)
+
+
+
+cl = []
+cl.append("client/main.cpp")
+cl.append("components/network/ServerManager.cpp")
+env = Environment(CPPPATH = ["include", "../include"]);
+env.Append( CCFLAGS = config.cflags )
+env.Append( CCFLAGS = '-std=gnu++0x' )
+env.Append( LIBS = ["client_lib","pthread",'boost_system','boost_program_options','boost_regex',"boost_filesystem","zmq"] )
+
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc'] )
+
+env.Append( LIBPATH= [ "lib", "../lib", "..", "../.." ] )
+env.Append( CPPPATH=[])
+env.Program( target = 'clientbin',  source = cl)
+
+
+
+mds = []
+mds.append("main.cpp")
+mds.append( buildHelper.scanFiles("components/diskio/") )
+mds.append( buildHelper.scanFiles("components/DataObjectCache") )
+mds.append( buildHelper.scanFiles("components/OperationManager") )
+mds.append( buildHelper.scanFiles("components/raidlibs") )
+mds.append( buildHelper.scanFiles("../pc2fsprofiler") )
+mds.append( buildHelper.scanFiles("components/configurationManager") )
+
+env = Environment(CPPPATH = ["include","../include"]);
+env.Append( CCFLAGS = config.cflags )
+env.Append( CCFLAGS = '-std=gnu++0x' )
+env.Append( LIBS = ["lib","pthread","Toolscollection", 'boost_system','boost_program_options','boost_regex',"boost_filesystem","ConfigurationManager","zmq","customExceptions", "network_libs","server", "Logger"] )
+
+
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc'] )
+
+env.Append( LIBPATH= [ "lib", "../lib"] )
+env.Append( CPPPATH=['../include',"mm", "tools","ConfigurationManager","network_libs","customExceptions", "server"])
+env.Program( target = 'dataServer',  source = mds)
+
+
+mds = []
+mds.append("Benchmarking/SimpleBenchmarker.cpp")
+mds.append("client/Client.cpp" )
+mds.append( buildHelper.scanFiles("components/diskio/") )
+mds.append( buildHelper.scanFiles("components/DataObjectCache") )
+mds.append( buildHelper.scanFiles("components/OperationManager") )
+mds.append( buildHelper.scanFiles("components/raidlibs") )
+mds.append( buildHelper.scanFiles("../pc2fsprofiler") )
+mds.append( buildHelper.scanFiles("components/configurationManager") )
+mds.append( "components/network/sshwrapper.cpp" )
+
+env = Environment(CPPPATH = ["include","../include"]);
+env.Append( CCFLAGS = config.cflags )
+env.Append( CCFLAGS = '-std=gnu++0x' )
+env.Append( LIBS = ["lib","pthread","Toolscollection", 'boost_system','boost_program_options','boost_regex',"boost_filesystem","ConfigurationManager","zmq","customExceptions", "network_libs","server", "Logger","libssh2"] )
+
+if config.get_tcmalloc():
+	env.Append( LIBS = ['tcmalloc'] )
+
+env.Append( LIBPATH= [ "lib", "../lib"] )
+env.Append( CPPPATH=['../include',"mm", "tools","ConfigurationManager","network_libs","customExceptions", "server"])
+env.Program( target = 'benchmarker',  source = mds)
+

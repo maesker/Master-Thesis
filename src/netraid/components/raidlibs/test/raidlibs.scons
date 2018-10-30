@@ -1,0 +1,49 @@
+#!/usr/bin/python
+Import('testRunner')
+
+import os
+import glob
+import sys
+
+def unique( list ) :
+         return dict.fromkeys( list ).keys()
+
+
+def recursiveDirs(root) :
+         return filter( ( lambda a : a.rfind( ".git") == -1 ), [ a[0] for a in os.walk( root ) ] )
+
+
+def scanFiles(dir, accept=[ "*.cpp", "*.c" ], reject=["test"] ) :
+         sources = []
+         paths = recursiveDirs( dir )
+         for path in paths:
+                 for pattern in accept:
+                         sources += glob.glob( path + "/" + pattern )
+         for pattern in reject:
+                 sources = filter( ( lambda a : a.rfind( pattern ) == -1 ), sources )
+         return unique( sources )
+
+testSrc = ["../Libraid5.cpp"]
+testSrc.append( "../../network/ServerManager.cpp")
+testSrc.append("Libraid5Test.cpp")
+testEnv = Environment( )
+testEnv.Append( LIBS = [ "gtest", "gtest_main", "boost_thread","boost_system", "Logger","zmq", "Pc2fsProfiler" ] )
+testEnv.Append( LIBPATH = [ "../../../logging", "../../../../lib","../../../../" ] ) 
+testEnv.Append( CCFLAGS =  ['-std=gnu++0x', '-g'] )
+testEnv.Append( CPPPATH=['../../../../include','../../../include'] )
+testEnv.Program( target = 'LibraidTest', source = testSrc)
+
+Command("LibraidTest.passed",'LibraidTest', testRunner.runUnitTest)
+
+testSrc = ["../Libraid4.cpp"]
+testSrc.append( "../../network/ServerManager.cpp")
+testSrc.append("Libraid4Test.cpp")
+
+testEnv = Environment( )
+testEnv.Append( LIBS = [ "gtest", "gtest_main", "boost_thread","boost_system", "Logger","zmq", "Pc2fsProfiler" ] )
+testEnv.Append( LIBPATH = [ "../../../logging", "../../../../lib","../../../../" ] ) 
+testEnv.Append( CCFLAGS =  ['-std=gnu++0x', '-g'] )
+testEnv.Append( CPPPATH=['../../../../include','../../../include'] )
+testEnv.Program( target = 'Libraid4Test', source = testSrc)
+
+Command("Libraid4Test.passed",'Libraid4Test', testRunner.runUnitTest)

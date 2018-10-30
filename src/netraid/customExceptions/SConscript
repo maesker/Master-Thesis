@@ -1,0 +1,13 @@
+#!/usr/bin/python
+
+lib_target  = "exceptions"
+lib_sources = ["AbstractException.cpp"]
+
+env = Environment()
+env.Append( CPPFLAGS = [ "-std=c++0x" ] )
+env.Append( CPPPATH = [ "../include" ] )
+env.Append( LIBS = [ "exception"] )
+
+env.StaticLibrary(target = lib_target, source = lib_sources)
+
+#env.Append( LIBPATH= [ "lib"] )

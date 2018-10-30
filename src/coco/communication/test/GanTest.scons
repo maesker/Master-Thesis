@@ -1,0 +1,16 @@
+#!/usr/bin/python
+#Import('buildHelper')
+#Import('testRunner')
+
+#src = buildHelper.scanFiles("communication")
+#src.append( buildHelper.scanFiles("coordination") )
+#src.append( buildHelper.scanFiles("loadbalancing") )
+#src.append("main.cpp")
+
+#env = Environment()
+#env.Append( LIBS = [ "zmq", "pthread", "boost_thread", "boost_system"  ] )
+#env.Append ( CCFLAGS = '-std=gnu++0x' )
+#env.Program( target = 'ganTest',  source = ["../ReCommunicationServer.cpp", "RecServerTest.cpp"])
+
+#Command("ganTest.passed",'ganTest', testRunner.runUnitTest)
+
