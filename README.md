@@ -2,9 +2,13 @@
 
 Title: Overcoming write penalties of conflicting client operations in distributed storage systems
 
-Basically, it's a redundant, lock-free distributed RAID-4/5 controller 
+Basically, it's a redundant, lock-free distributed RAID-4/5 controller that I developed in 2012. 
 
 For details please refer to the presentation or thesis. 
+
+The source contains code from our 2011 project group and my thesis. Some of the dependencies had API changes that break the current build process. Once I have some free time, I'll fix those and add a proper readme.
+
+
 
 # Problem:
 Erasure coding in distributed environments:
